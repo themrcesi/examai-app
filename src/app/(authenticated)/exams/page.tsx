@@ -9,8 +9,11 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Link from 'next/link';
 import { Skeleton } from "@/components/ui/skeleton"
+import { Trash2, Pencil } from "lucide-react"
+import { deleteExam } from '@/lib/api';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 10;
 
 export default function ExamsPage() {
   const [allExams, setAllExams] = useState([]);
@@ -56,6 +59,28 @@ export default function ExamsPage() {
   const subjects = [...new Set(allExams.map(exam => exam.subject))];
   const topics = [...new Set(allExams.flatMap(exam => exam.topics))];
   const difficulties = [...new Set(allExams.map(exam => exam.difficulty))];
+
+  const handleDeleteExam = async (e: React.MouseEvent, examId: string) => {
+    e.preventDefault(); // Prevent navigation to exam detail page
+    if (confirm('Are you sure you want to delete this exam?')) {
+      await deleteExam(examId);
+      setAllExams(prevExams => prevExams.filter(exam => exam.id !== examId));
+      setFilteredExams(prevExams => prevExams.filter(exam => exam.id !== examId));
+    }
+  };
+
+  function getDifficultyVariant(difficulty: string) {
+    switch (difficulty.toLowerCase()) {
+      case 'easy':
+        return 'secondary'
+      case 'medium':
+        return 'default'
+      case 'hard':
+        return 'destructive'
+      default:
+        return 'outline'
+    }
+  }
 
   return (
     <div className="flex-1 p-10 min-h-screen bg-gray-50 flex flex-col px-4 py-12">
@@ -109,70 +134,80 @@ export default function ExamsPage() {
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {isLoading ? (
-          // Skeleton loaders
-          Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
-            <Card key={index} className="h-full">
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          // Actual exam cards
-          exams.map((exam, index) => (
-            <Link href={`/exams/${exam.id}`} key={index} className="h-full">
-              <Card className="hover:shadow-lg transition-shadow duration-300 cursor-pointer h-full flex flex-col">
-                <CardHeader>
-                  <CardTitle className="flex justify-between items-center">
-                    <span>{exam.name}</span>
+      <div className="mb-8 overflow-x-auto text-primary">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Subject</TableHead>
+              <TableHead>Topics</TableHead>
+              <TableHead>Difficulty</TableHead>
+              <TableHead>Questions</TableHead>
+              <TableHead>Attempts</TableHead>
+              <TableHead>Best Grade</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              // Skeleton loaders for table rows
+              Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
+                <TableRow key={index}>
+                  {Array.from({ length: 8 }).map((_, cellIndex) => (
+                    <TableCell key={cellIndex}>
+                      <Skeleton className="h-4 w-full" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              // Actual exam rows
+              exams.map((exam) => (
+                <TableRow key={exam.id} className="group">
+                  <TableCell>
+                    <Link href={`/exams/${exam.id}`} className="text-primary hover:underline">
+                      {exam.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>{exam.subject}</TableCell>
+                  <TableCell>{exam.topics.join(', ')}</TableCell>
+                  <TableCell>
                     <Badge variant={getDifficultyVariant(exam.difficulty)}>{exam.difficulty}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-grow flex flex-col justify-between">
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center text-sm text-muted-foreground">
-                        <BookOpen className="w-4 h-4 mr-2" />
-                        Questions
-                      </span>
-                      <span className="font-medium">{exam.numberOfQuestions}</span>
+                  </TableCell>
+                  <TableCell>{exam.numberOfQuestions}</TableCell>
+                  <TableCell>{exam.attempts}</TableCell>
+                  <TableCell>{exam.bestGrade}%</TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <Link href={`/exams/${exam.id}`}>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Do Exam"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => handleDeleteExam(e, exam.id)}
+                        title="Delete Exam"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center text-sm text-muted-foreground">
-                        <BarChart className="w-4 h-4 mr-2" />
-                        Attempts
-                      </span>
-                      <span className="font-medium">{exam.attempts}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center text-sm text-muted-foreground">
-                        <Award className="w-4 h-4 mr-2" />
-                        Best Grade
-                      </span>
-                      <span className="font-medium">{exam.bestGrade}%</span>
-                    </div>
-                  </div>
-                  <div className="text-sm text-muted-foreground mt-2">
-                    <div>Subject: {exam.subject}</div>
-                    <div>Topics: {exam.topics.join(', ')}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))
-        )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
 
-      <div className="flex justify-center items-center space-x-2 mt-auto">
+      <div className="flex justify-center items-center space-x-2 mt-auto text-primary">
         <Button
           variant="outline"
           size="icon"
@@ -202,17 +237,4 @@ export default function ExamsPage() {
       </div>
     </div>
   )
-}
-
-function getDifficultyVariant(difficulty: string) {
-  switch (difficulty.toLowerCase()) {
-    case 'easy':
-      return 'secondary'
-    case 'medium':
-      return 'default'
-    case 'hard':
-      return 'destructive'
-    default:
-      return 'outline'
-  }
 }
