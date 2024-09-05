@@ -100,8 +100,9 @@ export default function ExamDetailPage() {
         </CardContent>
       </Card>
 
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-2 text-primary">Your Progress</h2>
+      {/* Sticky progress bar */}
+      <div className="sticky top-0 z-10 bg-white shadow-md p-4 mb-6">
+        <h2 className="text-xl font-bold mb-2 text-primary">Your Progress</h2>
         <Progress value={progress} className="w-full" />
         <p className="text-sm text-gray-500 mt-2">
           {Math.round(progress)}% complete ({Object.values(answers).filter(answer => answer !== '').length} of {exam.questions.length} questions answered)
